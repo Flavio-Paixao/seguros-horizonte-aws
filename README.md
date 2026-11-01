@@ -144,6 +144,8 @@ Plan: 69 to add, 0 to change, 0 to destroy.
 
 Sem credenciais AWS, `init`, `fmt` e `validate` funcionam normalmente; só o `plan` precisa da conta. Nos PRs do projeto, o plan foi conferido offline, com um provider simulado e as consultas de conta, região, AMI e versão do banco sobrescritas por valores fictícios.
 
+> ⚠️ **O plan offline com valores simulados não substitui o plan real.** Ele confere a contagem e as ligações entre os recursos, mas as consultas à AWS (data sources) não acontecem: o valor fictício entra no lugar da resposta da API. Foi assim que um erro passou despercebido até o KAN-9: a consulta da versão do Aurora era recusada pela API real (`InvalidParameterCombination`, depois `no RDS engine versions found`), mas o mock respondia uma versão qualquer. Antes de considerar uma mudança validada, rode o `plan` com credenciais AWS de verdade.
+
 ## CI (integração contínua)
 
 Todo PR e todo push na `main` rodam o workflow [`.github/workflows/terraform-ci.yml`](.github/workflows/terraform-ci.yml). São 3 jobs em paralelo; o PR só fica verde se os 3 passarem.
@@ -179,7 +181,8 @@ pip install checkov==3.2.300 && checkov -d . --framework terraform --compact
 | 7 · S3 + KMS | KAN-5 | #5 | 3 buckets criptografados, ARNs exatos no IAM | 68 |
 | Documentação | KAN-6 | #6 | README, ARCHITECTURE, DECISIONS | 68 |
 | Custos | KAN-7 | #7 | COST-ANALYSIS | 68 |
-| CI | KAN-8 | — | GitHub Actions com fmt, validate, tflint e checkov; SG default bloqueado e subnets públicas sem IP automático | 69 |
+| CI | KAN-8 | #8 | GitHub Actions com fmt, validate, tflint e checkov; SG default bloqueado e subnets públicas sem IP automático | 69 |
+| Correção do plan real | KAN-9 | — | Versão do Aurora fixa em 15.19 no lugar do data source; classe da instância conferida na AWS | 69 |
 
 ## Licença
 

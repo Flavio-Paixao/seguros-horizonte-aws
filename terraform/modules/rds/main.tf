@@ -1,12 +1,31 @@
 # ==========================================
-# VERSÃO DO MOTOR (perguntamos à AWS)
+# VERSÃO DO MOTOR (fixa, conferida na AWS)
 # ==========================================
-# Em vez de fixar "15.2" (que pode ser aposentada), pedimos a versão
-# padrão atual da família aurora-postgresql15.
-data "aws_rds_engine_version" "aurora_pg" {
-  engine                 = "aurora-postgresql"
-  parameter_group_family = "aurora-postgresql15"
-  default_only           = true
+# A versão vem da variável engine_version (ver DECISIONS 4.9). Antes ela era
+# descoberta por um data source (aws_rds_engine_version), mas as duas
+# tentativas falharam na API real (KAN-9): primeiro com
+# "InvalidParameterCombination" e depois com "no RDS engine versions found",
+# embora `aws rds describe-db-engine-versions` liste a família 15 em sa-east-1.
+# Fixar a versão tira essa consulta do caminho e deixa o plan reproduzível.
+
+# ==========================================
+# CLASSE DA INSTÂNCIA (conferida na AWS)
+# ==========================================
+# O plan não confere se a classe existe para este motor nesta região: esse
+# erro só apareceria no apply. Este data source pergunta à AWS (no plan) se
+# a combinação motor + versão + classe pode ser criada em sa-east-1 e se ela
+# suporta o que usamos (Performance Insights e Enhanced Monitoring).
+# Se não puder, o plan falha aqui, com uma mensagem clara.
+data "aws_rds_orderable_db_instance" "aurora" {
+  engine         = "aurora-postgresql"
+  engine_version = var.engine_version
+
+  # Lista com um item só: o Aurora devolve uma opção por tipo de storage
+  # (aurora e aurora-iopt1); a lista faz o data source aceitar a primeira.
+  preferred_instance_classes = [var.instance_class]
+
+  supports_performance_insights = true
+  supports_enhanced_monitoring  = true
 }
 
 # ==========================================
@@ -56,7 +75,7 @@ resource "aws_rds_cluster" "aurora" {
   #checkov:skip=CKV_AWS_139:Projeto de estudo precisa poder ser destruido (DECISIONS 4.8, pendencia 5)
   cluster_identifier = "${var.project_name}-aurora-cluster"
   engine             = "aurora-postgresql"
-  engine_version     = data.aws_rds_engine_version.aurora_pg.version
+  engine_version     = var.engine_version
   database_name      = var.db_name
 
   # SENHA: a AWS gera e guarda no Secrets Manager. Nada de senha no código.
@@ -109,7 +128,7 @@ resource "aws_rds_cluster_instance" "primary" {
   cluster_identifier = aws_rds_cluster.aurora.id
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
-  instance_class     = var.instance_class
+  instance_class     = data.aws_rds_orderable_db_instance.aurora.instance_class
   availability_zone  = var.azs[0] # writer na 1a
 
   db_subnet_group_name       = aws_db_subnet_group.main.name
@@ -139,7 +158,7 @@ resource "aws_rds_cluster_instance" "replica" {
   cluster_identifier = aws_rds_cluster.aurora.id
   engine             = aws_rds_cluster.aurora.engine
   engine_version     = aws_rds_cluster.aurora.engine_version
-  instance_class     = var.instance_class
+  instance_class     = data.aws_rds_orderable_db_instance.aurora.instance_class
   availability_zone  = var.azs[1] # reader na 1b
 
   db_subnet_group_name       = aws_db_subnet_group.main.name

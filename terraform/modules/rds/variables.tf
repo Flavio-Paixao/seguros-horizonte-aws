@@ -47,3 +47,14 @@ variable "instance_class" {
   type        = string
   default     = "db.t3.medium"
 }
+
+variable "engine_version" {
+  description = "Versão do Aurora PostgreSQL (família 15). Conferida com: aws rds describe-db-engine-versions --engine aurora-postgresql --region sa-east-1"
+  type        = string
+  default     = "15.19"
+
+  validation {
+    condition     = can(regex("^15\\.[0-9]+$", var.engine_version))
+    error_message = "A versão precisa ser da família 15 (ex.: 15.19), porque o parameter group do módulo é aurora-postgresql15."
+  }
+}

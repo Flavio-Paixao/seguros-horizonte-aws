@@ -54,6 +54,9 @@ module "rds" {
   db_name        = "segurosdb"
   db_username    = "postgresadmin"
   instance_class = "db.t3.medium"
+
+  # Versões 15.x listadas pela AWS em sa-east-1 (2026-11-01): 15.10, 15.12 a 15.15, 15.17 a 15.19
+  engine_version = "15.19"
 }
 
 # ==========================================

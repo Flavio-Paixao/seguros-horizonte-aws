@@ -181,9 +181,15 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Por quê:** projeto de estudo que precisa poder ser destruído sem travar.
 - **Trade-off (importante):** **em produção seria o contrário** (`true` e `false`). Hoje, um `terraform destroy` apaga o banco sem deixar cópia final.
 
-### 4.9 Versão do motor obtida por data source, com `ignore_changes`
-- **Por quê:** usa a versão padrão atual da família 15 e não briga com upgrades menores automáticos.
-- **Trade-off:** a versão exata só aparece no plan, o que reduz a reprodutibilidade.
+### 4.9 Versão do motor fixa em `15.19`, com `ignore_changes`
+- **Por quê:** a versão vem da variável `engine_version` (padrão `15.19`, validada para a família 15). Foi conferida na própria conta com `aws rds describe-db-engine-versions --engine aurora-postgresql --region sa-east-1`, que lista em 2026-11-01 as versões 15.10, 15.12 a 15.15 e 15.17 a 15.19 (família `aurora-postgresql15`). O `ignore_changes` evita que o Terraform brigue com os upgrades menores automáticos.
+- **Por que não o data source `aws_rds_engine_version` (mudado no KAN-9):** ele falhou no plan real de duas formas. Com `default_only = true`, a API devolveu `InvalidParameterCombination: RDS can't find a default engine version`. Com `latest = true`, devolveu `no RDS engine versions found`, embora o CLI listasse a família 15 na mesma conta. O provider faz a consulta com parâmetros que o CLI não usa (ele pede também caracteres e fusos suportados), e a causa exata da resposta vazia não foi confirmada. O plan offline não pegou nenhum dos dois porque o data source era simulado.
+- **Por que não a LTS (`15.10`):** a LTS pede `auto_minor_version_upgrade = false` para continuar nela, e a AWS recomenda a LTS só para quem não pode fazer upgrades (fonte: [Aurora PostgreSQL LTS](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Updates.LTS.html)).
+- **Trade-off:** a versão fica velha e precisa ser atualizada à mão (a 15.19 tem suporte padrão até 28/02/2028, segundo o [calendário de versões](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraPostgreSQLReleaseNotes/aurorapostgresql-release-calendar.html)). Em troca, o plan é reproduzível e não depende de uma consulta frágil.
+
+### 4.9.1 Classe da instância conferida na AWS durante o plan
+- **Por quê:** o `plan` não confere se `db.t3.medium` existe para o Aurora PostgreSQL nessa versão e nessa região. O data source `aws_rds_orderable_db_instance` faz essa pergunta à AWS (e exige suporte a Performance Insights e Enhanced Monitoring, que o módulo usa). Se a combinação não existir, o erro aparece no plan, não no apply.
+- **Trade-off:** mais uma chamada de leitura (`rds:DescribeOrderableDBInstanceOptions`), que a futura role de `plan` no CI também vai precisar.
 
 ### 4.10 Autenticação IAM habilitada, mas sem uso
 - **Por quê:** deixa a porta aberta para trocar a senha por tokens temporários no futuro.
@@ -314,6 +320,7 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 ### 7.4 Validar só até o `plan`, nunca `apply`
 - **Por quê:** projeto de portfólio. Um `apply` geraria custo real (NAT, 2 Aurora, 2 EC2, ALB, chaves).
 - **Trade-off (importante para a entrevista):** **o código nunca foi aplicado.** `validate` e `plan` não pegam erros que só aparecem na criação, como limites de conta, permissões da key policy ou o health check falhando. Os planos dos PRs foram conferidos offline, com valores fictícios para conta, região, AMI e versão do banco. Um `plan` real depende de credenciais AWS.
+- **Lição (KAN-9): o plan offline com mocks não substitui o plan real.** O mock troca a resposta da API por um valor fixo, então erros de consulta (parâmetro inválido, versão ou classe inexistente na região, permissão faltando) passam despercebidos. O primeiro plan real recusou a consulta da versão do Aurora, que o mock aceitava. Toda mudança só conta como validada depois de um `plan` com credenciais reais.
 
 ### 7.5 Um PR por fase, com a tabela de decisões na descrição
 - **Por quê:** histórico revisável e rastreável pelos tickets do Jira (KAN-n).
@@ -324,7 +331,7 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Por que GitHub Actions:** o código já está no GitHub, é grátis para repositório público e não precisa de servidor.
 - **Por que tflint e checkov, e não só o `validate`:** o `validate` não sabe que um tipo de instância não existe nem que um bucket está aberto. O tflint pega erros de AWS; o checkov pega riscos de segurança.
 - **Por que checkov e não tfsec/Trivy:** o checkov tem mais regras para AWS, cobre relações entre recursos (ex.: SG anexado, bucket com policy) e aceita o skip justificado no próprio recurso. O tfsec foi incorporado ao Trivy; os dois serviriam.
-- **Por que sem `plan` no CI:** o `plan` precisa ler a conta (ID, AMI, versão do Aurora). Isso exigiria uma role via OIDC só de leitura, criada fora do Terraform. Fica como próximo passo.
+- **Por que sem `plan` no CI:** o `plan` precisa ler a conta (ID, AMI, versão e classes do Aurora). Isso exigiria uma role via OIDC só de leitura, criada fora do Terraform. Fica como próximo passo, e o KAN-9 mostrou que vale a pena: só o plan real pega erros de consulta à AWS.
 - **Trade-off:** versões fixas (Terraform 1.9.8, tflint 0.53, plugin AWS 0.36, checkov 3.2.300) dão resultado estável, mas precisam ser atualizadas à mão.
 
 ### 7.7 Skips do checkov só com justificativa

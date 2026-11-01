@@ -165,7 +165,7 @@ Efeito prático: mesmo um usuário com `kms:Decrypt` no IAM não consegue descri
 
 | Item | Configuração |
 |---|---|
-| Motor | Aurora PostgreSQL, família 15. A versão exata vem do data source `aws_rds_engine_version` (a padrão atual da família) e fica em `ignore_changes` |
+| Motor | Aurora PostgreSQL, família 15. A versão é fixa (`15.19`, variável `engine_version` do módulo, conferida com `aws rds describe-db-engine-versions`) e fica em `ignore_changes` para não brigar com upgrades menores automáticos. O data source `aws_rds_orderable_db_instance` confere no plan se a classe `db.t3.medium` pode ser criada com essa versão em sa-east-1 |
 | Banco / usuário | `segurosdb` / `postgresadmin` |
 | Senha | `manage_master_user_password = true`: a AWS gera a senha e guarda no **Secrets Manager**. Não existe senha no código nem no state |
 | Instâncias | 2 × `db.t3.medium`: **writer** fixado em sa-east-1a e **reader** em sa-east-1b, com `promotion_tier = 1` |
