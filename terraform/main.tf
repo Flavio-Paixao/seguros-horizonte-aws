@@ -11,3 +11,11 @@ module "networking" {
   environment            = "prod"
   project_name           = "seguros-horizonte"
 }
+
+# Module: IAM
+module "iam" {
+  source = "./modules/iam"
+
+  project_name = "seguros-horizonte"
+  environment  = "prod"
+}
