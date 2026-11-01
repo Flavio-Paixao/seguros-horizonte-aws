@@ -29,7 +29,7 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Trade-off:** as instâncias privadas precisam de NAT para sair, e acessar o banco do notebook exige SSM ou bastion.
 
 ### 1.3 Um único NAT Gateway, na 1a
-- **Por quê:** um NAT custa cerca de US$ 45/mês parado, mais tráfego. Um só mantém o custo baixo; por isso a tabela de rotas privada também é uma só.
+- **Por quê:** um NAT custa cerca de US$ 68/mês parado em sa-east-1, mais tráfego (ver [COST-ANALYSIS.md](COST-ANALYSIS.md)). Um só mantém o custo baixo; por isso a tabela de rotas privada também é uma só.
 - **Por que não um NAT por AZ:** é a prática de produção, porém dobra o custo fixo.
 - **Trade-off (ponto fraco assumido):** se a 1a cair, as instâncias da 1b continuam recebendo tráfego do ALB, mas perdem a saída para a internet. Ver [pendências](#pendências-conhecidas).
 

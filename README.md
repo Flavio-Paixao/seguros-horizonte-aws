@@ -13,6 +13,7 @@ O objetivo é mostrar uma arquitetura de três camadas **segura e resiliente**: 
 | [README.md](README.md) | Visão geral, diagrama, estrutura e como validar (este arquivo) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Cada camada em detalhe: rede, IAM, KMS, Aurora, ALB/ASG e S3 |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Cada decisão com o porquê, as alternativas descartadas, o trade-off e as pendências conhecidas |
+| [docs/COST-ANALYSIS.md](docs/COST-ANALYSIS.md) | Custo mensal estimado em sa-east-1, por serviço, opções de redução e custo de um teste de poucas horas |
 
 ## Diagrama
 
@@ -71,7 +72,8 @@ Leitura rápida do caminho de uma requisição:
 ├── README.md
 ├── docs/
 │   ├── ARCHITECTURE.md
-│   └── DECISIONS.md
+│   ├── DECISIONS.md
+│   └── COST-ANALYSIS.md
 └── terraform/
     ├── versions.tf          # Terraform >= 1.5, provider AWS ~> 5.20, default_tags
     ├── variables.tf         # aws_region, project_name, environment
