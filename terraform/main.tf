@@ -22,3 +22,32 @@ module "iam" {
   project_name = var.project_name
   environment  = var.environment
 }
+
+# ==========================================
+# Module: KMS (chave do banco e chave do S3)
+# ==========================================
+
+module "kms" {
+  source = "./modules/kms"
+
+  project_name = var.project_name
+}
+
+# ==========================================
+# Module: RDS (Aurora PostgreSQL em 2 AZs)
+# ==========================================
+
+module "rds" {
+  source = "./modules/rds"
+
+  project_name            = var.project_name
+  azs                     = ["sa-east-1a", "sa-east-1b"]
+  private_subnet_ids      = module.networking.private_subnet_ids
+  rds_security_group_id   = module.networking.rds_security_group_id
+  rds_monitoring_role_arn = module.iam.rds_monitoring_role_arn
+  kms_key_arn             = module.kms.rds_key_arn
+
+  db_name        = "segurosdb"
+  db_username    = "postgresadmin"
+  instance_class = "db.t3.medium"
+}

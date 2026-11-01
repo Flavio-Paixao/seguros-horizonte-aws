@@ -229,3 +229,26 @@ resource "aws_iam_role_policy_attachment" "lambda_vpc_execution" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
+# ==========================================
+# FASE 5: EC2 LÊ A SENHA DO BANCO NO SECRETS MANAGER
+# ==========================================
+
+data "aws_region" "current" {}
+
+# Os segredos que o RDS cria sozinho têm nome começando com "rds!cluster-".
+# Só GetSecretValue, só na região e conta do projeto, só segredos do RDS.
+resource "aws_iam_role_policy" "ec2_db_secret" {
+  name = "${var.project_name}-ec2-db-secret"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
+        Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:rds!cluster-*"
+      }
+    ]
+  })
+}
