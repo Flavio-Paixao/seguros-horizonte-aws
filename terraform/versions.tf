@@ -1,6 +1,6 @@
 terraform {
   required_version = ">= 1.5.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,15 +10,16 @@ terraform {
 }
 
 provider "aws" {
-  region = "sa-east-1"
-  
+  region = var.aws_region
+
+  # Tags aplicadas automaticamente em TODO recurso que aceita tags
   default_tags {
     tags = {
-      Environment = "prod"
-      Project     = "seguros-horizonte"
+      Environment = var.environment # L7: a variável agora é usada de verdade
+      Project     = var.project_name
       ManagedBy   = "Terraform"
       Owner       = "Flavio"
-      CreatedAt   = "2026-10"
+      Repository  = "github.com/Flavio-Paixao/seguros-horizonte"
     }
   }
 }

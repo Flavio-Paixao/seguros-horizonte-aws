@@ -1,4 +1,4 @@
-# Outputs - valores pra usar em outros módulos
+# Outputs: valores usados pelos outros módulos
 
 output "vpc_id" {
   description = "ID da VPC"
@@ -10,19 +10,24 @@ output "vpc_cidr" {
   value       = aws_vpc.main.cidr_block
 }
 
-output "public_subnet_id" {
-  description = "ID da subnet pública"
-  value       = aws_subnet.public.id
+output "public_subnet_ids" {
+  description = "IDs das subnets públicas (2 AZs)"
+  value       = aws_subnet.public[*].id
 }
 
-output "private_subnet_id" {
-  description = "ID da subnet privada"
-  value       = aws_subnet.private.id
+output "private_subnet_ids" {
+  description = "IDs das subnets privadas (2 AZs)"
+  value       = aws_subnet.private[*].id
 }
 
 output "alb_security_group_id" {
   description = "ID do security group do ALB"
   value       = aws_security_group.alb.id
+}
+
+output "app_security_group_id" {
+  description = "ID do security group da aplicação"
+  value       = aws_security_group.app.id
 }
 
 output "rds_security_group_id" {

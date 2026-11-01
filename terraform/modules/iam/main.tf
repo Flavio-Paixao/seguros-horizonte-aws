@@ -35,8 +35,8 @@ resource "aws_iam_role" "ec2_role" {
 
 # Policy: S3 Access
 resource "aws_iam_role_policy" "ec2_s3_access" {
-  name   = "${var.project_name}-ec2-s3-access"
-  role   = aws_iam_role.ec2_role.id
+  name = "${var.project_name}-ec2-s3-access"
+  role = aws_iam_role.ec2_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -59,8 +59,8 @@ resource "aws_iam_role_policy" "ec2_s3_access" {
 
 # Policy: RDS Access
 resource "aws_iam_role_policy" "ec2_rds_access" {
-  name   = "${var.project_name}-ec2-rds-access"
-  role   = aws_iam_role.ec2_role.id
+  name = "${var.project_name}-ec2-rds-access"
+  role = aws_iam_role.ec2_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -79,8 +79,8 @@ resource "aws_iam_role_policy" "ec2_rds_access" {
 
 # Policy: CloudWatch Logs
 resource "aws_iam_role_policy" "ec2_cloudwatch_logs" {
-  name   = "${var.project_name}-ec2-cloudwatch-logs"
-  role   = aws_iam_role.ec2_role.id
+  name = "${var.project_name}-ec2-cloudwatch-logs"
+  role = aws_iam_role.ec2_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -164,8 +164,8 @@ resource "aws_iam_role" "lambda_role" {
 
 # Lambda: S3 Access
 resource "aws_iam_role_policy" "lambda_s3_access" {
-  name   = "${var.project_name}-lambda-s3-access"
-  role   = aws_iam_role.lambda_role.id
+  name = "${var.project_name}-lambda-s3-access"
+  role = aws_iam_role.lambda_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -187,8 +187,8 @@ resource "aws_iam_role_policy" "lambda_s3_access" {
 
 # Lambda: RDS Access
 resource "aws_iam_role_policy" "lambda_rds_access" {
-  name   = "${var.project_name}-lambda-rds-access"
-  role   = aws_iam_role.lambda_role.id
+  name = "${var.project_name}-lambda-rds-access"
+  role = aws_iam_role.lambda_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -206,8 +206,8 @@ resource "aws_iam_role_policy" "lambda_rds_access" {
 
 # Lambda: CloudWatch Logs
 resource "aws_iam_role_policy" "lambda_cloudwatch_logs" {
-  name   = "${var.project_name}-lambda-cloudwatch-logs"
-  role   = aws_iam_role.lambda_role.id
+  name = "${var.project_name}-lambda-cloudwatch-logs"
+  role = aws_iam_role.lambda_role.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
