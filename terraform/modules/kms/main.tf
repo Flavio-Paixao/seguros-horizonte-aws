@@ -52,6 +52,8 @@ locals {
 }
 
 data "aws_iam_policy_document" "rds_key" {
+  #checkov:skip=CKV_AWS_111:Key policy: Resource * significa esta chave; restricao vem dos principals e conditions (DECISIONS 3.7)
+  #checkov:skip=CKV_AWS_356:Key policy: Resource * significa esta chave (DECISIONS 3.7)
   statement {
     sid       = "KeyAdministration"
     effect    = "Allow"
@@ -116,6 +118,8 @@ data "aws_iam_policy_document" "rds_key" {
 }
 
 data "aws_iam_policy_document" "s3_key" {
+  #checkov:skip=CKV_AWS_111:Key policy: Resource * significa esta chave; restricao vem dos principals e conditions (DECISIONS 3.7)
+  #checkov:skip=CKV_AWS_356:Key policy: Resource * significa esta chave (DECISIONS 3.7)
   statement {
     sid       = "KeyAdministration"
     effect    = "Allow"

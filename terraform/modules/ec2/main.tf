@@ -83,6 +83,7 @@ resource "aws_launch_template" "app" {
 # TARGET GROUP (grupo de máquinas do ALB)
 # ==========================================
 resource "aws_lb_target_group" "app" {
+  #checkov:skip=CKV_AWS_378:ALB -> EC2 em HTTP dentro da VPC privada; o TLS terminaria no ALB (DECISIONS 5.12)
   name_prefix = "app-"
   port        = 8000
   protocol    = "HTTP"
@@ -111,6 +112,10 @@ resource "aws_lb_target_group" "app" {
 # APPLICATION LOAD BALANCER
 # ==========================================
 resource "aws_lb" "app" {
+  #checkov:skip=CKV2_AWS_20:Sem dominio/certificado ACM, nao ha HTTPS para redirecionar (DECISIONS 5.6, pendencia 1)
+  #checkov:skip=CKV2_AWS_28:Sem WAF por custo e escopo de estudo (pendencia 10)
+  #checkov:skip=CKV_AWS_150:Projeto de estudo precisa poder ser destruido (DECISIONS 5.11)
+  #checkov:skip=CKV_AWS_91:Access logs do ALB ainda nao ligados ao bucket de logs (DECISIONS 5.13, pendencia 15)
   name               = "${var.project_name}-alb"
   internal           = false
   load_balancer_type = "application"
@@ -129,6 +134,8 @@ resource "aws_lb" "app" {
 
 # Listener: "escuto na porta 80 e mando para o target group"
 resource "aws_lb_listener" "http" {
+  #checkov:skip=CKV_AWS_2:Listener so HTTP:80, sem certificado (DECISIONS 5.6, pendencia 1)
+  #checkov:skip=CKV_AWS_103:Sem listener TLS, logo nao ha politica TLS a definir (DECISIONS 5.6, pendencia 1)
   load_balancer_arn = aws_lb.app.arn
   port              = 80
   protocol          = "HTTP"

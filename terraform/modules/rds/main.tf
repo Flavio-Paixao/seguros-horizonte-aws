@@ -52,6 +52,8 @@ resource "aws_rds_cluster_parameter_group" "aurora" {
 # CLUSTER AURORA
 # ==========================================
 resource "aws_rds_cluster" "aurora" {
+  #checkov:skip=CKV2_AWS_8:Backup nativo do Aurora (7 dias) em vez de AWS Backup (DECISIONS 4.11)
+  #checkov:skip=CKV_AWS_139:Projeto de estudo precisa poder ser destruido (DECISIONS 4.8, pendencia 5)
   cluster_identifier = "${var.project_name}-aurora-cluster"
   engine             = "aurora-postgresql"
   engine_version     = data.aws_rds_engine_version.aurora_pg.version

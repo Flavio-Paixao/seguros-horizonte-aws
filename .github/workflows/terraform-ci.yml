@@ -1,0 +1,93 @@
+# CI do Terraform: checa formato, sintaxe, boas práticas e segurança em cada PR.
+# NUNCA roda plan/apply e NÃO usa credenciais da AWS.
+name: Terraform CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Só leitura do repositório: o pipeline não escreve nada no GitHub
+permissions:
+  contents: read
+
+# Um push novo no mesmo PR cancela a execução antiga
+concurrency:
+  group: terraform-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Versões fixas: o resultado não muda sozinho de um dia para o outro
+env:
+  TF_VERSION: "1.9.8"
+  TFLINT_VERSION: "v0.53.0"
+  CHECKOV_VERSION: "3.2.300"
+  TF_IN_AUTOMATION: "true"
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  validate:
+    name: fmt + validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt -check
+        run: terraform fmt -check -recursive -diff
+
+      # -backend=false: baixa o provider (versão do .terraform.lock.hcl, aws 5.100.0)
+      # sem tocar em state nem em conta AWS
+      - name: terraform init
+        run: terraform init -backend=false -input=false -lockfile=readonly
+
+      - name: terraform validate
+        run: terraform validate
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.tflint.d/plugins
+          key: tflint-${{ hashFiles('terraform/.tflint.hcl') }}
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: tflint --init
+        run: tflint --init
+        env:
+          # evita limite de requisições ao baixar o plugin da AWS
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: tflint
+        run: tflint --recursive --config "$(pwd)/.tflint.hcl" --format compact
+
+  checkov:
+    name: checkov (segurança)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar checkov
+        run: pip install "checkov==${CHECKOV_VERSION}"
+
+      # Falha o job se houver qualquer achado sem skip justificado no código.
+      # Cada skip aponta para a decisão correspondente em docs/DECISIONS.md.
+      - name: checkov
+        run: checkov -d . --framework terraform --quiet --compact

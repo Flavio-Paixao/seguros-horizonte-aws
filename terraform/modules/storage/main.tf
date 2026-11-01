@@ -5,6 +5,9 @@
 # bucket_prefix: o Terraform acrescenta um sufixo aleatório.
 # (Nomes de bucket são únicos no mundo; um nome fixo poderia já estar em uso.)
 resource "aws_s3_bucket" "app_data" {
+  #checkov:skip=CKV_AWS_144:Sem replicacao entre regioes por custo (DECISIONS 6.8)
+  #checkov:skip=CKV_AWS_18:Sem server access logging no S3 (DECISIONS 6.9)
+  #checkov:skip=CKV2_AWS_62:Sem consumidor de eventos ainda (DECISIONS 6.9)
   bucket_prefix = "${var.project_name}-app-data-"
 
   tags = {
@@ -77,6 +80,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
 # ==========================================
 
 resource "aws_s3_bucket" "backups" {
+  #checkov:skip=CKV_AWS_144:Sem replicacao entre regioes por custo (DECISIONS 6.8)
+  #checkov:skip=CKV_AWS_18:Sem server access logging no S3 (DECISIONS 6.9)
+  #checkov:skip=CKV2_AWS_62:Sem consumidor de eventos ainda (DECISIONS 6.9)
   bucket_prefix = "${var.project_name}-backups-"
 
   tags = {
@@ -143,6 +149,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "backups" {
 # ==========================================
 
 resource "aws_s3_bucket" "logs" {
+  #checkov:skip=CKV_AWS_144:Sem replicacao entre regioes por custo (DECISIONS 6.8)
+  #checkov:skip=CKV_AWS_18:Sem server access logging no S3 (DECISIONS 6.9)
+  #checkov:skip=CKV2_AWS_62:Sem consumidor de eventos ainda (DECISIONS 6.9)
+  #checkov:skip=CKV_AWS_21:Logs sem versionamento de proposito (DECISIONS 6.5)
   bucket_prefix = "${var.project_name}-logs-"
 
   tags = {

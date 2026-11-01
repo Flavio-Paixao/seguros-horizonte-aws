@@ -53,6 +53,19 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 ### 1.8 CIDRs `10.0.1x` para privadas e `10.0.x` para públicas
 - **Por quê:** o IP diz o tipo e a AZ da subnet. Os blocos /24 (251 IPs úteis) sobram para o case.
 
+
+### 1.9 Sem VPC Flow Logs
+- **Por quê:** os Flow Logs vão para CloudWatch Logs ou S3 e cobram por GB ingerido. Num projeto que nunca foi aplicado, não haveria tráfego para analisar.
+- **Trade-off:** sem eles, não há registro de quem tentou falar com quem dentro da VPC, o que dificulta investigar incidentes. Apontado pelo checkov (CKV2_AWS_11). Ver [pendências](#pendências-conhecidas).
+
+### 1.10 SG default da VPC sem nenhuma regra (correção do CI)
+- **Por quê:** toda VPC nasce com um SG default que libera tráfego entre os membros dele. Nada no projeto usa o default, então o Terraform o assume (`aws_default_security_group`) e remove as regras. Um recurso criado sem SG fica isolado em vez de aberto.
+- **Origem:** achado do checkov (CKV2_AWS_12) no KAN-8. Acrescenta 1 recurso (68 → 69), sem custo.
+
+### 1.11 Subnets públicas sem IP público automático (correção do CI)
+- **Por quê:** `map_public_ip_on_launch = true` dava IP público a qualquer instância lançada ali. Ninguém precisa disso: o NAT usa o Elastic IP e o ALB gerencia os próprios IPs. Agora uma EC2 colocada por engano numa subnet pública não fica exposta.
+- **Origem:** achado do checkov (CKV_AWS_130) no KAN-8.
+
 ---
 
 ## 2. IAM
@@ -126,6 +139,12 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Por quê:** a rotação troca o material da chave sozinha, sem recriptografar os dados nem mudar o ARN. Apagar uma chave torna os dados ilegíveis para sempre, e 30 dias é a janela máxima para desfazer um erro.
 - **Trade-off:** num ambiente de estudo, destruir demora 30 dias para valer de verdade.
 
+
+### 3.7 `Resource = "*"` nas key policies (falso positivo do checkov)
+- **O que o checkov diz:** CKV_AWS_111 e CKV_AWS_356 reclamam de `"*"` como recurso em policies com ações de escrita.
+- **Por que está certo assim:** numa **key policy**, `"*"` significa "esta chave", porque a policy fica presa a uma única chave. A restrição está nos *principals* (só a conta), no `kms:ViaService` e no `kms:CallerAccount` (ver 3.3). A própria documentação da AWS usa `"*"` nas key policies.
+- **Como foi tratado:** skip com comentário nos dois `aws_iam_policy_document` do módulo `kms`.
+
 ---
 
 ## 4. Aurora
@@ -169,6 +188,12 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 ### 4.10 Autenticação IAM habilitada, mas sem uso
 - **Por quê:** deixa a porta aberta para trocar a senha por tokens temporários no futuro.
 - **Trade-off:** nenhuma role tem `rds-db:connect` hoje, então a opção não faz nada ainda.
+
+
+### 4.11 Backup nativo do Aurora em vez de AWS Backup
+- **Por quê:** o Aurora já faz backup contínuo com recuperação para qualquer ponto dos últimos 7 dias (ver 4.6), sem recurso extra.
+- **Por que não AWS Backup (checkov CKV2_AWS_8):** centraliza políticas, cópia entre regiões e cofres imutáveis, mas acrescenta plano, cofre e role só para um banco.
+- **Trade-off:** não há cópia em outra região nem retenção longa. Em produção regulada, AWS Backup com cópia cruzada seria o caminho.
 
 ---
 
@@ -215,6 +240,21 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Por quê:** serve para o health check passar e provar a arquitetura.
 - **Trade-off:** não é uma aplicação real e não usa o banco nem o S3. O fluxo EC2 → Aurora e EC2 → S3 está permitido nas regras, mas **não foi exercitado**.
 
+
+### 5.11 ALB sem proteção de exclusão
+- **Por quê:** o mesmo motivo de 4.8: o projeto precisa poder ser destruído. Apontado pelo checkov (CKV_AWS_150).
+- **Trade-off:** em produção seria `enable_deletion_protection = true`.
+
+### 5.12 ALB fala HTTP com as instâncias
+- **Por quê:** o padrão é terminar o TLS no ALB e seguir em HTTP dentro da VPC, em subnets privadas e com o `app-sg` aceitando só o ALB. Apontado pelo checkov (CKV_AWS_378).
+- **Trade-off:** o tráfego interno não é criptografado. Para exigências mais rígidas, o target group usaria HTTPS com certificado na instância.
+- **Os outros achados de HTTP** (CKV_AWS_2, CKV_AWS_103, CKV2_AWS_20 e CKV_AWS_260 na porta 80 aberta) são consequência de 5.6 e saem quando a pendência 1 for resolvida.
+
+### 5.13 Sem access logs do ALB
+- **Por quê:** os access logs do ALB só gravam em bucket com SSE-S3 e precisam de bucket policy para a conta de logs do ELB. O bucket `logs` usa SSE-KMS com a CMK, então ligar exigiria um bucket próprio. Apontado pelo checkov (CKV_AWS_91).
+- **Trade-off:** sem registro de cada requisição. Ver pendência 15.
+- **Sem WAF** (CKV2_AWS_28): ver pendência 10.
+
 ---
 
 ## 6. S3
@@ -251,6 +291,12 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 - **Por quê:** fora do escopo; adicionam custo e complexidade.
 - **Trade-off:** os dados existem só em sa-east-1, e a imutabilidade dos backups não é garantida.
 
+
+### 6.9 Sem server access logging nem notificações de eventos no S3
+- **Por quê:** o access logging do S3 também não grava em bucket com SSE-KMS, e o bucket de logs não pode registrar a si mesmo. Notificações de evento só fazem sentido com um consumidor (Lambda, SQS), e não há nenhum. Apontado pelo checkov (CKV_AWS_18 e CKV2_AWS_62).
+- **Trade-off:** o acesso a objetos fica sem registro detalhado. Em produção, o CloudTrail com eventos de dados do S3 cobriria isso (pendência 10).
+- **Replicação** (CKV_AWS_144) e **versionamento em logs** (CKV_AWS_21): ver 6.8 e 6.5.
+
 ---
 
 ## 7. Terraform e processo
@@ -271,6 +317,37 @@ Para cada decisão: **o que foi feito**, **por quê**, **por que não** as alter
 
 ### 7.5 Um PR por fase, com a tabela de decisões na descrição
 - **Por quê:** histórico revisável e rastreável pelos tickets do Jira (KAN-n).
+
+
+### 7.6 CI com fmt, validate, tflint e checkov, sem credenciais AWS
+- **Por quê:** cada PR é checado automaticamente antes de ir para a `main`. São quatro camadas, da mais barata para a mais exigente: formato (`fmt`), linguagem (`validate`), boas práticas e regras da AWS (`tflint`) e segurança (`checkov`).
+- **Por que GitHub Actions:** o código já está no GitHub, é grátis para repositório público e não precisa de servidor.
+- **Por que tflint e checkov, e não só o `validate`:** o `validate` não sabe que um tipo de instância não existe nem que um bucket está aberto. O tflint pega erros de AWS; o checkov pega riscos de segurança.
+- **Por que checkov e não tfsec/Trivy:** o checkov tem mais regras para AWS, cobre relações entre recursos (ex.: SG anexado, bucket com policy) e aceita o skip justificado no próprio recurso. O tfsec foi incorporado ao Trivy; os dois serviriam.
+- **Por que sem `plan` no CI:** o `plan` precisa ler a conta (ID, AMI, versão do Aurora). Isso exigiria uma role via OIDC só de leitura, criada fora do Terraform. Fica como próximo passo.
+- **Trade-off:** versões fixas (Terraform 1.9.8, tflint 0.53, plugin AWS 0.36, checkov 3.2.300) dão resultado estável, mas precisam ser atualizadas à mão.
+
+### 7.7 Skips do checkov só com justificativa
+- **Regra:** nenhum achado é escondido. Se é correção simples e segura, corrige (1.10, 1.11). Se é decisão consciente, o recurso recebe `#checkov:skip=<regra>:<motivo>` apontando para o item deste documento. O job falha em qualquer achado novo sem skip.
+- **Falso positivo de módulos (CKV2_AWS_5):** o checkov diz que os 3 SGs não estão anexados a nada, porque eles são criados no módulo `networking` e anexados nos módulos `ec2` (ALB e launch template) e `rds`. Ele não segue a ligação entre módulos nessa regra.
+- **Resultado da primeira varredura (KAN-8):** 31 achados; 3 corrigidos (2 do checkov e 1 do tflint, o `versions.tf` que faltava no módulo `iam`) e 28 skips.
+
+| Regra | Recurso | Motivo | Item |
+|---|---|---|---|
+| CKV_AWS_2, CKV_AWS_103 | listener HTTP | Sem certificado, sem HTTPS | 5.6, pendência 1 |
+| CKV2_AWS_20, CKV_AWS_260 | ALB e `alb-sg` | Porta 80 aberta, sem redirect | 5.6, pendência 1 |
+| CKV_AWS_378 | target group | HTTP dentro da VPC | 5.12 |
+| CKV_AWS_150 | ALB | Sem proteção de exclusão | 5.11 |
+| CKV_AWS_91 | ALB | Sem access logs | 5.13, pendência 15 |
+| CKV2_AWS_28 | ALB | Sem WAF | pendência 10 |
+| CKV_AWS_111, CKV_AWS_356 | 2 key policies | `"*"` = esta chave | 3.7 |
+| CKV2_AWS_11 | VPC | Sem Flow Logs | 1.9, pendência 16 |
+| CKV2_AWS_5 | 3 SGs | Falso positivo entre módulos | 7.7 |
+| CKV_AWS_139 | Aurora | Sem proteção de exclusão | 4.8, pendência 5 |
+| CKV2_AWS_8 | Aurora | Backup nativo, sem AWS Backup | 4.11 |
+| CKV_AWS_144 | 3 buckets | Sem replicação | 6.8 |
+| CKV_AWS_18, CKV2_AWS_62 | 3 buckets | Sem access logging e sem eventos | 6.9 |
+| CKV_AWS_21 | bucket `logs` | Sem versionamento | 6.5 |
 
 ---
 
@@ -293,5 +370,6 @@ Esta lista é a parte honesta do projeto: o que **não** está resolvido, por qu
 | 11 | **Aplicação é só um health check** | O fluxo EC2 → Aurora e EC2 → S3 nunca foi exercitado | Aplicação real e testes de integração |
 | 12 | **Escala por CPU com alarmes** | Reação lenta e possível oscilação | *Target tracking* ou métricas do ALB |
 | 13 | **Instâncias burstable** (`t3`) e AMI "mais recente" | Desempenho variável e mudanças inesperadas no plan | Famílias dedicadas e AMI fixada por pipeline |
-| 14 | **Sem CI** (fmt, validate, tflint, checkov) | Erros chegam à `main` sem checagem automática | GitHub Actions rodando as validações em cada PR |
+| 14 | ~~Sem CI~~ **Resolvida no KAN-8** (ver 7.6) | O CI ainda não roda `plan` | Role só de leitura via OIDC para rodar `plan` no PR |
 | 15 | **Os buckets `backups` e `logs` ainda não são usados** | Recursos prontos sem produtor | Exportar logs do ALB e dumps do banco para eles |
+| 16 | **Sem VPC Flow Logs** | Sem registro do tráfego dentro da VPC para investigar incidentes | Flow Logs para S3 (mais barato que CloudWatch), com retenção curta |

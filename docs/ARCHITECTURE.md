@@ -49,7 +49,7 @@ Não existe ciclo: o Terraform consegue ordenar a criação sozinho (`kms` → `
 
 ## 2. Rede (`networking`)
 
-**17 recursos.** Arquivo: `terraform/modules/networking/main.tf`.
+**18 recursos.** Arquivo: `terraform/modules/networking/main.tf`.
 
 ### VPC e subnets
 
@@ -61,7 +61,7 @@ Não existe ciclo: o Terraform consegue ordenar a criação sozinho (`kms` → `
 | Subnet privada 1 | `10.0.11.0/24` | sa-east-1a | EC2 e Aurora writer |
 | Subnet privada 2 | `10.0.12.0/24` | sa-east-1b | EC2 e Aurora reader |
 
-As subnets são criadas com `count = length(var.azs)`, então as listas de AZs e CIDRs precisam estar na mesma ordem. As públicas têm `map_public_ip_on_launch = true`; as privadas não.
+As subnets são criadas com `count = length(var.azs)`, então as listas de AZs e CIDRs precisam estar na mesma ordem. Nenhuma subnet dá IP público automático (`map_public_ip_on_launch = false`): o NAT usa o Elastic IP e o ALB cuida dos próprios IPs. Assim, uma instância lançada por engano numa subnet pública não fica exposta.
 
 Padrão dos IPs: `10.0.1.x`/`10.0.2.x` são públicas, `10.0.11.x`/`10.0.12.x` são privadas. Só de olhar o IP dá para saber o tipo e a AZ da subnet.
 
@@ -89,6 +89,8 @@ A cadeia é **internet → ALB → app → banco**. A regra de entrada da app e 
 Hoje a porta 443 está aberta no `alb-sg`, mas não existe listener HTTPS no ALB. Ela foi deixada pronta para quando houver domínio e certificado.
 
 Não há nenhuma regra para a porta 22 (SSH) em lugar nenhum.
+
+O **SG default da VPC** é assumido pelo Terraform (`aws_default_security_group`) e fica **sem nenhuma regra**. Nada usa o default; se algum recurso for criado sem SG, ele cai no default e fica isolado em vez de aberto.
 
 ---
 

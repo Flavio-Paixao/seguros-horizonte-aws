@@ -3,12 +3,23 @@
 # ==========================================
 
 resource "aws_vpc" "main" {
+  #checkov:skip=CKV2_AWS_11:Sem VPC Flow Logs por custo de CloudWatch (DECISIONS 1.9, pendencia 16)
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
 
   tags = {
     Name = "${var.project_name}-vpc"
+  }
+}
+
+# Assume o SG default da VPC e remove todas as regras dele.
+# Nada usa o default; sem regras, um recurso criado sem SG fica isolado (checkov CKV2_AWS_12).
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+
+  tags = {
+    Name = "${var.project_name}-default-sg-bloqueado"
   }
 }
 
@@ -33,7 +44,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = var.azs[count.index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false # NAT usa EIP e o ALB gerencia os próprios IPs (checkov CKV_AWS_130)
 
   tags = {
     Name = "${var.project_name}-public-${var.azs[count.index]}"
@@ -131,6 +142,8 @@ resource "aws_route_table_association" "private" {
 # ==========================================
 
 resource "aws_security_group" "alb" {
+  #checkov:skip=CKV2_AWS_5:Falso positivo: o SG e anexado ao ALB no modulo ec2 (DECISIONS 7.7)
+  #checkov:skip=CKV_AWS_260:ALB publico precisa aceitar HTTP:80 da internet (DECISIONS 5.6, pendencia 1)
   name        = "${var.project_name}-alb-sg"
   description = "Security group do ALB (entrada da internet)"
   vpc_id      = aws_vpc.main.id
@@ -167,6 +180,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "app" {
+  #checkov:skip=CKV2_AWS_5:Falso positivo: o SG e anexado ao launch template no modulo ec2 (DECISIONS 7.7)
   name        = "${var.project_name}-app-sg"
   description = "Security group da aplicacao (EC2)"
   vpc_id      = aws_vpc.main.id
@@ -194,6 +208,7 @@ resource "aws_security_group" "app" {
 }
 
 resource "aws_security_group" "rds" {
+  #checkov:skip=CKV2_AWS_5:Falso positivo: o SG e anexado ao Aurora no modulo rds (DECISIONS 7.7)
   name        = "${var.project_name}-rds-sg"
   description = "Security group do Aurora PostgreSQL"
   vpc_id      = aws_vpc.main.id
