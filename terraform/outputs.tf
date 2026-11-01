@@ -23,7 +23,7 @@ output "rds_kms_key_arn" {
 }
 
 output "s3_kms_key_arn" {
-  description = "ARN da chave KMS do S3 (usada na Fase 7)"
+  description = "ARN da chave KMS do S3 (criptografa os 3 buckets)"
   value       = module.kms.s3_key_arn
 }
 
@@ -40,4 +40,19 @@ output "db_reader_endpoint" {
 output "db_master_user_secret_arn" {
   description = "ARN do segredo da senha do banco (Secrets Manager)"
   value       = module.rds.master_user_secret_arn
+}
+
+output "app_data_bucket_name" {
+  description = "Bucket de dados da aplicação"
+  value       = module.storage.app_data_bucket_name
+}
+
+output "backups_bucket_name" {
+  description = "Bucket de backups"
+  value       = module.storage.backups_bucket_name
+}
+
+output "logs_bucket_name" {
+  description = "Bucket de logs"
+  value       = module.storage.logs_bucket_name
 }

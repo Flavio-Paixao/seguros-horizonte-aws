@@ -20,7 +20,11 @@ module "iam" {
   source = "./modules/iam"
 
   project_name = var.project_name
-  environment  = var.environment
+  aws_region   = var.aws_region
+
+  # Fase 7: ARNs exatos no lugar dos curingas
+  app_bucket_arns = module.storage.bucket_arns
+  s3_kms_key_arn  = module.kms.s3_key_arn
 }
 
 # ==========================================
@@ -71,4 +75,17 @@ module "ec2" {
   asg_min_size         = 2 # uma instância por AZ, sempre
   asg_max_size         = 4
   asg_desired_capacity = 2
+}
+
+# ==========================================
+# Module: Storage (3 buckets S3 com SSE-KMS)
+# ==========================================
+
+module "storage" {
+  source = "./modules/storage"
+
+  project_name          = var.project_name
+  kms_key_arn           = module.kms.s3_key_arn
+  backup_retention_days = 30
+  log_retention_days    = 2555
 }
