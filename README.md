@@ -20,45 +20,6 @@ O objetivo é mostrar uma arquitetura de três camadas **segura e resiliente**: 
 ## Diagrama
 ![Arquitetura do Seguros Horizonte](docs/arquitetura.svg)
 
-```mermaid
-flowchart TB
-    user(["Usuário (internet)"])
-
-    subgraph aws["AWS · sa-east-1"]
-        subgraph vpc["VPC 10.0.0.0/16"]
-            igw["Internet Gateway"]
-
-            subgraph az1["AZ sa-east-1a"]
-                alb1["ALB (nó 1a)<br/>subnet pública 10.0.1.0/24"]
-                nat["NAT Gateway (único)<br/>subnet pública 10.0.1.0/24"]
-                ec2a["EC2 do Auto Scaling<br/>subnet privada 10.0.11.0/24"]
-                dbw[("Aurora writer<br/>subnet privada 10.0.11.0/24")]
-            end
-
-            subgraph az2["AZ sa-east-1b"]
-                alb2["ALB (nó 1b)<br/>subnet pública 10.0.2.0/24"]
-                ec2b["EC2 do Auto Scaling<br/>subnet privada 10.0.12.0/24"]
-                dbr[("Aurora reader<br/>subnet privada 10.0.12.0/24")]
-            end
-        end
-
-        s3[("S3: app-data, backups, logs<br/>SSE-KMS, sem acesso público")]
-        kms["KMS: chave do banco e chave do S3"]
-        sm["Secrets Manager: senha do banco"]
-    end
-
-    user -->|"HTTP :80"| igw
-    igw --> alb1 & alb2
-    alb1 & alb2 -->|":8000"| ec2a & ec2b
-    ec2a & ec2b -->|":5432"| dbw
-    dbw -. "replicação" .-> dbr
-    ec2a & ec2b -. "saída 0.0.0.0/0" .-> nat
-    nat --> igw
-    ec2a & ec2b -. "HTTPS" .-> s3
-    ec2a & ec2b -. "GetSecretValue" .-> sm
-    kms -. "criptografa" .-> s3
-    kms -. "criptografa" .-> dbw
-```
 
 Leitura rápida do caminho de uma requisição:
 
