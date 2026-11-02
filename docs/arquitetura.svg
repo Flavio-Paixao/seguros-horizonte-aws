@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 700" role="img" aria-labelledby="t d" font-family="system-ui, Segoe UI, Arial, sans-serif">
+  <title id="t">Arquitetura do Seguros Horizonte</title>
+  <desc id="d">Usuário, Internet Gateway, VPC com duas zonas de disponibilidade, ALB, EC2 em Auto Scaling, Aurora writer e reader, NAT Gateway, S3, KMS e Secrets Manager.</desc>
+  <defs>
+    <marker id="seta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52606d"/>
+    </marker>
+    <style>
+      .caixa { fill: #ffffff; stroke: #3b2f2f; stroke-width: 1.5; rx: 8; }
+      .dados { fill: #fdf3e7; stroke: #b7791f; stroke-width: 1.5; rx: 8; }
+      .seg { fill: #eef6ff; stroke: #2b6cb0; stroke-width: 1.5; rx: 8; }
+      .rede { fill: #f1f5f0; stroke: #4a7c59; stroke-width: 1.5; rx: 8; }
+      .zona { fill: none; stroke: #9aa5b1; stroke-width: 1; stroke-dasharray: 6 4; rx: 12; }
+      .t { font-size: 14px; fill: #1f2933; text-anchor: middle; }
+      .s { font-size: 11.5px; fill: #52606d; text-anchor: middle; }
+      .z { font-size: 12px; fill: #52606d; font-weight: 600; }
+      .l { stroke: #52606d; stroke-width: 1.6; fill: none; marker-end: url(#seta); }
+      .p { stroke-dasharray: 5 4; }
+      .r { font-size: 11px; fill: #52606d; }
+    </style>
+  </defs>
+  <rect width="1000" height="700" fill="#faf7f5"/>
+
+  <!-- Entrada -->
+  <rect class="caixa" x="400" y="28" width="200" height="52"/><text class="t" x="500" y="52">Usuário</text><text class="s" x="500" y="69">internet</text>
+  <rect class="rede" x="400" y="110" width="200" height="50"/><text class="t" x="500" y="132">Internet Gateway</text><text class="s" x="500" y="149">entrada e saída da VPC</text>
+  <path class="l" d="M500,80 L500,108"/><text class="r" x="508" y="98">HTTP :80</text>
+
+  <!-- VPC -->
+  <rect class="zona" x="40" y="185" width="640" height="450"/><text class="z" x="54" y="205">VPC 10.0.0.0/16 · sa-east-1</text>
+  <rect class="zona" x="60" y="225" width="290" height="395"/><text class="z" x="72" y="244">AZ sa-east-1a</text>
+  <rect class="zona" x="370" y="225" width="290" height="395"/><text class="z" x="382" y="244">AZ sa-east-1b</text>
+
+  <!-- Subnets públicas -->
+  <rect class="rede" x="80" y="270" width="130" height="56"/><text class="t" x="145" y="294">ALB</text><text class="s" x="145" y="312">nó 1a · 10.0.1.0/24</text>
+  <rect class="rede" x="220" y="270" width="110" height="56"/><text class="t" x="275" y="294">NAT Gateway</text><text class="s" x="275" y="312">único · 10.0.1.0/24</text>
+  <rect class="rede" x="390" y="270" width="250" height="56"/><text class="t" x="515" y="294">ALB</text><text class="s" x="515" y="312">nó 1b · subnet pública 10.0.2.0/24</text>
+
+  <!-- Subnets privadas -->
+  <rect class="caixa" x="80" y="440" width="250" height="56"/><text class="t" x="205" y="464">EC2 (Auto Scaling)</text><text class="s" x="205" y="482">subnet privada 10.0.11.0/24</text>
+  <rect class="caixa" x="390" y="440" width="250" height="56"/><text class="t" x="515" y="464">EC2 (Auto Scaling)</text><text class="s" x="515" y="482">subnet privada 10.0.12.0/24</text>
+  <rect class="dados" x="80" y="540" width="250" height="56"/><text class="t" x="205" y="564">Aurora writer</text><text class="s" x="205" y="582">PostgreSQL · subnet privada</text>
+  <rect class="dados" x="390" y="540" width="250" height="56"/><text class="t" x="515" y="564">Aurora reader</text><text class="s" x="515" y="582">PostgreSQL · réplica do writer</text>
+
+  <!-- Fluxo principal -->
+  <path class="l" d="M440,160 L440,216 L145,216 L145,268"/>
+  <path class="l" d="M560,160 L560,216 L515,216 L515,268"/>
+  <path class="l" d="M145,326 L145,438"/><text class="r" x="152" y="388">:8000</text>
+  <path class="l" d="M515,326 L515,438"/><text class="r" x="522" y="388">:8000</text>
+  <path class="l" d="M145,496 L145,538"/><text class="r" x="152" y="522">:5432</text>
+  <path class="l" d="M450,496 L450,518 L300,518 L300,538"/><text class="r" x="330" y="512">:5432</text>
+  <path class="l p" d="M330,568 L388,568"/>
+
+  <!-- Saída pela NAT -->
+  <path class="l p" d="M275,438 L275,328"/><text class="r" x="282" y="380">saída</text>
+  <path class="l p" d="M330,298 L360,298 L360,135 L398,135"/>
+
+  <!-- Serviços gerenciados -->
+  <rect class="dados" x="730" y="290" width="230" height="60"/><text class="t" x="845" y="314">S3</text><text class="s" x="845" y="332">app-data, backups, logs · SSE-KMS</text>
+  <rect class="seg" x="730" y="400" width="230" height="60"/><text class="t" x="845" y="424">KMS</text><text class="s" x="845" y="442">chave do banco e chave do S3</text>
+  <rect class="seg" x="730" y="510" width="230" height="60"/><text class="t" x="845" y="534">Secrets Manager</text><text class="s" x="845" y="552">senha do banco · GetSecretValue</text>
+  <path class="l p" d="M640,468 L690,468 L690,320 L728,320"/><text class="r" x="694" y="382">HTTPS</text>
+  <path class="l p" d="M690,468 L690,540 L728,540"/>
+  <path class="l p" d="M845,400 L845,352"/><text class="r" x="853" y="380">criptografa</text>
+  <path class="l p" d="M730,430 L668,430 L668,568 L642,568"/><text class="r" x="660" y="522" text-anchor="end">criptografa</text>
+
+  <!-- Legenda -->
+  <text class="r" x="40" y="668">Linha cheia: tráfego da requisição · tracejada: replicação, saída e acesso a serviços · Security groups em cadeia: internet → ALB → app → banco</text>
+</svg>

@@ -18,6 +18,7 @@ O objetivo é mostrar uma arquitetura de três camadas **segura e resiliente**: 
 | [docs/COST-ANALYSIS.md](docs/COST-ANALYSIS.md) | Custo mensal estimado em sa-east-1, por serviço, opções de redução e custo de um teste de poucas horas |
 
 ## Diagrama
+![Arquitetura do Seguros Horizonte](docs/arquitetura.svg)
 
 ```mermaid
 flowchart TB
